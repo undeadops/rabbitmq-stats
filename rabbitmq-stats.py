@@ -67,7 +67,7 @@ class RabbitMonitor:
         self.logger.debug("Sending Stats for %s - %s" % (stat['vhost'],stat['name']))
         queue_name = stat['name'].replace('.','_')
         self.statsd.gauge('%s.messages' % queue_name, stat['messages'])
-        self.statsd.guage('%s.consumers' % queue_name, stat['consumers'])
+        self.statsd.gauge('%s.consumers' % queue_name, stat['consumers'])
         self.statsd.gauge('%s.messages_details_rate' % queue_name, stat['messages_details']['rate'])
         self.statsd.gauge('%s.messages_ready' % queue_name, stat['messages_ready'])
         self.statsd.gauge('%s.messages_unacknowledged' % queue_name, stat['messages_unacknowledged'])
@@ -115,7 +115,7 @@ class RabbitMonitor:
         """
         while True:
             stats = self._pull_stats()
-            
+
             # Catch Failure to Collect stats from RabbitMQ
             if stats:
                 self._parse_stats(stats)
