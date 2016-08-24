@@ -68,10 +68,22 @@ class RabbitMonitor:
         queue_name = stat['name'].replace('.','_')
         self.statsd.gauge('%s.messages' % queue_name, stat['messages'])
         self.statsd.gauge('%s.consumers' % queue_name, stat['consumers'])
-        self.statsd.gauge('%s.messages_details_rate' % queue_name, stat['messages_details']['rate'])
-        self.statsd.gauge('%s.messages_ready' % queue_name, stat['messages_ready'])
-        self.statsd.gauge('%s.messages_unacknowledged' % queue_name, stat['messages_unacknowledged'])
-        self.statsd.gauge('%s.message_stats.ack' % queue_name, stat['message_stats']['ack'])
+        try:
+            self.statsd.gauge('%s.messages_details_rate' % queue_name, stat['messages_details']['rate'])
+        except KeyError:
+            pass
+        try:
+            self.statsd.gauge('%s.messages_ready' % queue_name, stat['messages_ready'])
+        except KeyError:
+            pass
+        try:
+            self.statsd.gauge('%s.messages_unacknowledged' % queue_name, stat['messages_unacknowledged'])
+        except KeyError:
+            pass
+        try:
+            self.statsd.gauge('%s.message_stats.ack' % queue_name, stat['message_stats']['ack'])
+        except KeyError:
+            pass
         try:
             self.statsd.gauge('%s.message_stats.confirm' % queue_name, stat['message_stats']['confirm'])
         except KeyError:
