@@ -76,8 +76,14 @@ class RabbitMonitor:
             self.statsd.gauge('%s.message_stats.confirm' % queue_name, stat['message_stats']['confirm'])
         except KeyError:
             pass
-        self.statsd.gauge('%s.message_stats.deliver' % queue_name, stat['message_stats']['deliver'])
-        self.statsd.gauge('%s.message_stats.deliver_get' % queue_name, stat['message_stats']['deliver_get'])
+        try:
+            self.statsd.gauge('%s.message_stats.deliver' % queue_name, stat['message_stats']['deliver'])
+        except KeyError:
+            pass
+        try:
+            self.statsd.gauge('%s.message_stats.deliver_get' % queue_name, stat['message_stats']['deliver_get'])
+        except KeyError:
+            pass
         try:
             self.statsd.gauge('%s.message_stats.deliver_no_ack' % queue_name, stat['message_stats']['deliver_no_ack'])
         except KeyError:
@@ -90,7 +96,10 @@ class RabbitMonitor:
             self.statsd.gauge('%s.message_stats.get_no_ack' % queue_name, stat['message_stats']['get_no_ack'])
         except KeyError:
             pass
-        self.statsd.gauge('%s.message_stats.redeliver' % queue_name, stat['message_stats']['redeliver'])
+        try:
+            self.statsd.gauge('%s.message_stats.redeliver' % queue_name, stat['message_stats']['redeliver'])
+        except KeyError:
+            pass
         self.statsd.gauge('%s.backing_queue_status.avg_ack_egress_rate' % queue_name, stat['backing_queue_status']['avg_ack_egress_rate'])
         self.statsd.gauge('%s.backing_queue_status.avg_ack_ingress_rate' % queue_name, stat['backing_queue_status']['avg_ack_ingress_rate'])
         self.statsd.gauge('%s.backing_queue_status.avg_egress_rate' % queue_name, stat['backing_queue_status']['avg_egress_rate'])
