@@ -37,9 +37,11 @@ class RabbitMonitor:
         self.logger.debug("StatsD Prefix for statsd: %s" % self.prefix)
         self.logger.info("Gather stats every %s" % self.interval)
 
+        self.regex = False
         if self.rabbitmq_exclude is not "":
+            self.logger.debug("Exclude regex: %s" % self.rabbitmq_exclude)
             try:
-                self.rabbit_regex = re.compile(self.rabbitmq_exclude)
+                self.regex = re.compile(self.rabbitmq_exclude)
             except:
                 self.logger.info("Failed to compile Regex Exclude list [%s]" % self.rabbitmq_exclude)
                 self.logger.info("\tcontinuing without exclude list")
@@ -60,62 +62,36 @@ class RabbitMonitor:
             return False
 
 
+    def _flatten_dict(self, d):
+        def items():
+            for key, value in d.items():
+                if isinstance(value, dict):
+                    for subkey, subvalue in self._flatten_dict(value).items():
+                        yield key + "." + subkey, subvalue
+                else:
+                    yield key, value
+
+        return dict(items())
+
+
     def _send_stats(self, stat):
         """
         Single JSON dict of Rabbit Queue, send to statsd
         """
         self.logger.debug("Sending Stats for %s - %s" % (stat['vhost'],stat['name']))
         queue_name = stat['name'].replace('.','_')
-        self.statsd.gauge('%s.messages' % queue_name, stat['messages'])
-        self.statsd.gauge('%s.consumers' % queue_name, stat['consumers'])
-        try:
-            self.statsd.gauge('%s.messages_details_rate' % queue_name, stat['messages_details']['rate'])
-        except KeyError:
-            pass
-        try:
-            self.statsd.gauge('%s.messages_ready' % queue_name, stat['messages_ready'])
-        except KeyError:
-            pass
-        try:
-            self.statsd.gauge('%s.messages_unacknowledged' % queue_name, stat['messages_unacknowledged'])
-        except KeyError:
-            pass
-        try:
-            self.statsd.gauge('%s.message_stats.ack' % queue_name, stat['message_stats']['ack'])
-        except KeyError:
-            pass
-        try:
-            self.statsd.gauge('%s.message_stats.confirm' % queue_name, stat['message_stats']['confirm'])
-        except KeyError:
-            pass
-        try:
-            self.statsd.gauge('%s.message_stats.deliver' % queue_name, stat['message_stats']['deliver'])
-        except KeyError:
-            pass
-        try:
-            self.statsd.gauge('%s.message_stats.deliver_get' % queue_name, stat['message_stats']['deliver_get'])
-        except KeyError:
-            pass
-        try:
-            self.statsd.gauge('%s.message_stats.deliver_no_ack' % queue_name, stat['message_stats']['deliver_no_ack'])
-        except KeyError:
-            pass
-        try:
-            self.statsd.gauge('%s.message_stats.get' % queue_name, stat['message_stats']['get'])
-        except KeyError:
-            pass
-        try:
-            self.statsd.gauge('%s.message_stats.get_no_ack' % queue_name, stat['message_stats']['get_no_ack'])
-        except KeyError:
-            pass
-        try:
-            self.statsd.gauge('%s.message_stats.redeliver' % queue_name, stat['message_stats']['redeliver'])
-        except KeyError:
-            pass
-        self.statsd.gauge('%s.backing_queue_status.avg_ack_egress_rate' % queue_name, stat['backing_queue_status']['avg_ack_egress_rate'])
-        self.statsd.gauge('%s.backing_queue_status.avg_ack_ingress_rate' % queue_name, stat['backing_queue_status']['avg_ack_ingress_rate'])
-        self.statsd.gauge('%s.backing_queue_status.avg_egress_rate' % queue_name, stat['backing_queue_status']['avg_egress_rate'])
-        self.statsd.gauge('%s.backing_queue_status.avg_ingress_rate' % queue_name, stat['backing_queue_status']['avg_ingress_rate'])
+
+        flat_stat = self._flatten_dict(stat)
+        
+        for k, v in flat_stat.items():
+            if isinstance(v, list):
+                self.logger.debug("Not Sending list value for %s.%s(%s)" % (queue_name, k, v))
+                continue
+            if isinstance(v, unicode):
+                self.logger.debug("Not Sending string/unicode value for %s.%s(%s)" % (queue_name, k, v))
+                continue
+            self.logger.debug("Sending %s.%s: %s" % (queue_name, k, v))
+            self.statsd.gauge("%s.%s" % (queue_name, k), v)
 
 
     def _parse_stats(self, stats):
@@ -124,10 +100,17 @@ class RabbitMonitor:
         """
         if type(stats) is not list:
             self.logger.debug("Initial stats json was not type(list)")
+            self.logger.debug(stats)
             stats = list(stats)
 
         for stat in stats:
-            self._send_stats(stat)
+            if self.regex:
+                self.logger.warning("Filtering Queue [%s] because of regex: '%s'" % (stat['name'],self.rabbitmq_exclude))
+                # If regex does not match queue name, send stats
+                if self.regex.match(stat['name']) is None:
+                    self._send_stats(stat)
+            else:
+                self._send_stats(stat)
 
 
     def run(self):
@@ -135,6 +118,7 @@ class RabbitMonitor:
         Run Loop, gathinger statistics
         """
         while True:
+            self.logger.info("Starting Stat run of %s" % self.rabbitmq_url)
             stats = self._pull_stats()
 
             # Catch Failure to Collect stats from RabbitMQ
