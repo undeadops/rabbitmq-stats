@@ -105,10 +105,11 @@ class RabbitMonitor:
 
         for stat in stats:
             if self.regex:
-                self.logger.warning("Filtering Queue [%s] because of regex: '%s'" % (stat['name'],self.rabbitmq_exclude))
                 # If regex does not match queue name, send stats
                 if self.regex.match(stat['name']) is None:
                     self._send_stats(stat)
+                else:
+                    self.logger.debug("Excluded Queue [%s] because of regex: '%s'" % (stat['name'],self.rabbitmq_exclude))
             else:
                 self._send_stats(stat)
 
