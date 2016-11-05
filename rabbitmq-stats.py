@@ -190,14 +190,14 @@ class RabbitMonitor:
                 self.logger.info("Failure to pull stats from RabbitMQ Management API")
             
             # Pull Rates
-            self.logger.info("Starting Rates run of %s" % self.rabbitmq_url)
-            rates = self._pull_rates() 
+            #self.logger.info("Starting Rates run of %s" % self.rabbitmq_url)
+            #rates = self._pull_rates() 
             
             # Catch Failure to Collect rates from RabbitMQ
-            if rates:
-                self._parse_rates(rates)
-            else:
-                self.logger.info("Failure to pull rates from RabbitMQ Management API")
+            #if rates:
+            #    self._parse_rates(rates)
+            #else:
+            #    self.logger.info("Failure to pull rates from RabbitMQ Management API")
 
             time.sleep(int(self.interval))
 
