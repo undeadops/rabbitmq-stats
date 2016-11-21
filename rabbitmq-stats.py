@@ -29,15 +29,15 @@ class RabbitMonitor:
         self.rabbitmq_password = os.environ.get("RABBITMQ_PASSWORD", "guest")
         self.rabbitmq_exclude = os.environ.get("RABBITMQ_EXCLUDE", "")
         self.rabbitmq_vhost = os.environ.get("RABBITMQ_VHOST", "/")
-
+        self.timeout = os.environ.get("TIMEOUT", 10)
         self.statsd = statsd.StatsClient(host=self.statsd_host, port=self.statsd_port, prefix=self.prefix)
 
         self.logger.info("Startings RabbitMQ monitor...")
-        self.logger.debug("Connecting to RabbitMQ Host: %s" % self.rabbitmq_url)
-        self.logger.info("Collecting Stats from vhost: %s" % self.rabbitmq_vhost)
+        self.logger.debug("RabbitMQ Host: %s" % self.rabbitmq_url)
+        self.logger.info("Stats from vhost: %s" % self.rabbitmq_vhost)
         self.logger.debug("StatsD host: %s:%s" % (self.statsd_host,self.statsd_port))
         self.logger.debug("StatsD Prefix for statsd: %s" % self.prefix)
-        self.logger.info("Gather stats every %s" % self.interval)
+        self.logger.info("Interval every %s" % self.interval)
 
         self.regex = False
         if self.rabbitmq_exclude is not "":
@@ -57,26 +57,21 @@ class RabbitMonitor:
         url = "%s/api/queues" % self.rabbitmq_url
         try:
             self.logger.debug("Connecting to: %s with %s:%s" % (url, self.rabbitmq_username, self.rabbitmq_password))
-            r = requests.get(url, auth=(self.rabbitmq_username, self.rabbitmq_password))
+            r = requests.get(url, auth=(self.rabbitmq_username, self.rabbitmq_password), timeout=self.timeout)
             return r.json()
         except:
             self.logger.info("Unable to connect to RabbitMQ Management API [%s]" % url)
             return False
 
 
-    def _pull_rates(self):
+    def _pull_overview(self):
         """
-        Pull Rates from RabbitMQ Management REST API
+        Pull Overview
         """
-        if self.rabbitmq_vhost == '/':
-            vhost = '%2f'
-        else:
-            vhost = self.rabbitmq_vhost
-
-        url = "%s/api/queues/%s/?sort=message_stats.publish_details.rate&sort_reverse=true&columns=name,message_stats.publish_details.rate,message_stats.deliver_get_details.rate" % (self.rabbitmq_url, vhost)
+        url = "%s/api/overview" % self.rabbitmq_url
         try:
             self.logger.debug("Connecting to: %s with %s:%s" % (url, self.rabbitmq_username, self.rabbitmq_password))
-            r = requests.get(url, auth=(self.rabbitmq_username, self.rabbitmq_password))
+            r = requests.get(url, auth=(self.rabbitmq_username, self.rabbitmq_password), timeout=self.timeout)
             return r.json()
         except:
             self.logger.info("Unable to connect to RabbitMQ Management API [%s]" % url)
@@ -103,7 +98,7 @@ class RabbitMonitor:
         queue_name = stat['name'].replace('.','_')
 
         flat_stat = self._flatten_dict(stat)
-        
+
         for k, v in flat_stat.items():
             if isinstance(v, list):
                 self.logger.debug("Not Sending list value for %s.%s(%s)" % (queue_name, k, v))
@@ -115,24 +110,34 @@ class RabbitMonitor:
             self.statsd.gauge("%s.%s" % (queue_name, k), v)
 
 
-    def _send_rates(self, rate):
+    def _send_overview(self, overview):
         """
         Single JSON dict of RabbitQueue, send to statsd
         """
-        self.logger.debug("Sending Rates for %s" % (rate['name']))
-        queue_name = rate['name'].replace('.','_')
+        self.logger.debug("Sending Overview")
 
-        flat_rate = self._flatten_dict(rate)
-
-        for k, v in flat_rate.items():
+        message_stats = self._flatten_dict(overview['message_stats'])
+        for k, v in message_stats.items():
             if isinstance(v, list):
-                self.logger.debug("Not Sending list value for %s.%s(%s)" % (queue_name, k, v))
+                self.logger.debug("Not Sending list value for %s.%s: %s" % (self.prefix, k, v))
                 continue
             if isinstance(v, unicode):
-                self.logger.debug("Not Sending string/unicode value for %s.%s(%s)" % (queue_name, k, v))
+                self.logger.debug("Not Sending string/unicode value for %s.%s: %s" % (self.prefix, k, v))
                 continue
-            self.logger.debug("Sending %s.%s: %s" % (queue_name, k, v))
-            self.statsd.gauge("%s.%s" % (queue_name, k), v)
+            if 'rate' in k:
+                self.logger.debug("Sending %s.%s: %s" % (self.prefix, k, v))
+                self.statsd.gauge("%s.%s" % (self.prefix, k), v)
+
+        queue_totals = self._flatten_dict(overview['queue_totals'])
+        for k, v in queue_totals.items():
+            if isinstance(v, list):
+                self.logger.debug("Not Sending list value for %s.%s: %s" % (self.prefix, k, v))
+                continue
+            if isinstance(v, unicode):
+                self.logger.debug("Not Sending string/unicode value for %s.%s: %s" % (self.prefix, k, v))
+                continue
+            self.logger.debug("Sending %s.%s: %s" % (self.prefix, k, v))
+            self.statsd.gauge("%s.%s" % (self.prefix, k), v)
 
 
     def _parse_stats(self, stats):
@@ -155,24 +160,15 @@ class RabbitMonitor:
                 self._send_stats(stat)
 
 
-    def _parse_rates(self, rates):
+    def _parse_overview(self, overview):
         """
         Send Rates received from RabbitMQ Management REST API
         """
-        if type(rates) is not list:
-            self.logger.debug("Initial rates json was not type(list)")
-            self.logger.debug(rates)
-            rates = list(rates)
-
-        for rate in rates:
-            if self.regex:
-                # If regex does not match queue name, send rates
-                if self.regex.match(rate['name']) is None:
-                    self._send_rates(rate)
-                else:
-                    self.logger.debug("Exclude Queue [%s] because of regex: '%s'" % (rate['name'],self.rabbitmq_exclude))
-            else:
-                self._send_rates(rate)
+        if type(overview) is not dict:
+            self.logger.debug("Initial overview json was not type(dict)")
+            self.logger.debug(overview)
+        else:
+            self._send_overview(overview)
 
 
     def run(self):
@@ -188,16 +184,17 @@ class RabbitMonitor:
                 self._parse_stats(stats)
             else:
                 self.logger.info("Failure to pull stats from RabbitMQ Management API")
-            
-            # Pull Rates
-            #self.logger.info("Starting Rates run of %s" % self.rabbitmq_url)
-            #rates = self._pull_rates() 
-            
-            # Catch Failure to Collect rates from RabbitMQ
-            #if rates:
-            #    self._parse_rates(rates)
-            #else:
-            #    self.logger.info("Failure to pull rates from RabbitMQ Management API")
+
+            # Pull Overview
+            self.logger.info("Starting Overview run of %s" % self.rabbitmq_url)
+            overview = self._pull_overview()
+
+            # Catch Failure to Collect overview from RabbitMQ
+            if overview:
+                self.logger.debug("Parse RabbitMQ Overview Stats")
+                self._parse_overview(overview)
+            else:
+                self.logger.info("Failure to pull overview from RabbitMQ Management API")
 
             time.sleep(int(self.interval))
 
