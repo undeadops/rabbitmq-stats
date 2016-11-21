@@ -126,7 +126,7 @@ class RabbitMonitor:
                 continue
             if 'rate' in k:
                 self.logger.debug("Sending message_stats.%s: %s" % (k, v))
-                self.statsd.gauge("%s.%s", % ("message_stats", k), v)
+                self.statsd.gauge("%s.%s" % ("message_stats", k), v)
 
         queue_totals = self._flatten_dict(overview['queue_totals'])
         for k, v in queue_totals.items():
