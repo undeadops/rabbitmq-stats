@@ -119,25 +119,25 @@ class RabbitMonitor:
         message_stats = self._flatten_dict(overview['message_stats'])
         for k, v in message_stats.items():
             if isinstance(v, list):
-                self.logger.debug("Not Sending list value for %s: %s" % (k, v))
+                self.logger.debug("Not Sending list value for message_stats.%s: %s" % (k, v))
                 continue
             if isinstance(v, unicode):
-                self.logger.debug("Not Sending string/unicode value for %s: %s" % (k, v))
+                self.logger.debug("Not Sending string/unicode value for message_stats.%s: %s" % (k, v))
                 continue
             if 'rate' in k:
-                self.logger.debug("Sending %s: %s" % (k, v))
-                self.statsd.gauge(k, v)
+                self.logger.debug("Sending message_stats.%s: %s" % (k, v))
+                self.statsd.gauge("%s.%s", % ("message_stats", k), v)
 
         queue_totals = self._flatten_dict(overview['queue_totals'])
         for k, v in queue_totals.items():
             if isinstance(v, list):
-                self.logger.debug("Not Sending list value for %s: %s" % (k, v))
+                self.logger.debug("Not Sending list value for queue_totals.%s: %s" % (k, v))
                 continue
             if isinstance(v, unicode):
-                self.logger.debug("Not Sending string/unicode value for %s: %s" % (k, v))
+                self.logger.debug("Not Sending string/unicode value for queue_totals.%s: %s" % (k, v))
                 continue
-            self.logger.debug("Sending %s: %s" % (k, v))
-            self.statsd.gauge(k, v)
+            self.logger.debug("Sending queue_totals.%s: %s" % (k, v))
+            self.statsd.gauge("%s.%s" % ("queue_totals", k), v)
 
 
     def _parse_stats(self, stats):
