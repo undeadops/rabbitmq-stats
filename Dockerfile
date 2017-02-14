@@ -7,8 +7,5 @@ WORKDIR /app
 COPY requirements.txt /app
 RUN pip install -r requirements.txt
 COPY rabbitmq-stats.py /app
-COPY scripts/* scripts/
 
-EXPOSE 5000
-
-CMD ["/app/scripts/startup.sh"]
+CMD ["/usr/bin/python","rabbitmq-stats.py"]
