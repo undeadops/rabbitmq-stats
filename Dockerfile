@@ -4,8 +4,9 @@ MAINTAINER Mitch Anderson <mitch@metauser.net>
 
 RUN mkdir -p /app
 WORKDIR /app
-ADD requirements.txt /app
+COPY requirements.txt /app
 RUN pip install -r requirements.txt
-ADD rabbitmq-stats.py /app
+COPY rabbitmq-stats.py /app
+COPY scripts/* scripts/
 
-CMD ["/usr/bin/python","rabbitmq-stats.py"]
+CMD ["/app/scripts/startup.sh"]
