@@ -1,5 +1,7 @@
 *.pyc
 testdata*
 
+# Ignore Actual Kubernetes Deployment Yamls
+*.yaml
 
 *.swp
