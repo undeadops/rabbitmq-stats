@@ -49,4 +49,8 @@ spec:
               secretKeyRef:
                 name: rabbitmq-stats-secrets
                 key: statsd_port
-                
+          - name: LOG_LEVEL
+            valueFrom:
+              secretKeyRef:
+                name: rabbitmq-stats-secrets
+                key: log_level
