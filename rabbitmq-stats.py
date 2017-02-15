@@ -33,10 +33,10 @@ class RabbitMonitor:
         self.statsd = statsd.StatsClient(host=self.statsd_host, port=self.statsd_port, prefix=self.prefix)
 
         self.logger.info("Startings RabbitMQ monitor...")
-        self.logger.debug("RabbitMQ Host: %s" % self.rabbitmq_url)
+        self.logger.info("RabbitMQ Host: %s" % self.rabbitmq_url)
         self.logger.info("Stats from vhost: %s" % self.rabbitmq_vhost)
-        self.logger.debug("StatsD host: %s:%s" % (self.statsd_host,self.statsd_port))
-        self.logger.debug("StatsD Prefix for statsd: %s" % self.prefix)
+        self.logger.info("StatsD host: %s:%s" % (self.statsd_host,self.statsd_port))
+        self.logger.info("StatsD Prefix for statsd: %s" % self.prefix)
         self.logger.info("Interval every %s" % self.interval)
 
         self.regex = False
