@@ -41,7 +41,7 @@ class RabbitMonitor:
 
         self.regex = False
         if self.rabbitmq_exclude is not "":
-            self.logger.debug("Exclude regex: %s" % self.rabbitmq_exclude)
+            self.logger.info("Exclude regex: %s" % self.rabbitmq_exclude)
             try:
                 self.regex = re.compile(self.rabbitmq_exclude)
             except:
@@ -155,7 +155,7 @@ class RabbitMonitor:
                 if self.regex.match(stat['name']) is None:
                     self._send_stats(stat)
                 else:
-                    self.logger.debug("Excluded Queue [%s] because of regex: '%s'" % (stat['name'],self.rabbitmq_exclude))
+                    self.logger.info("Excluded Queue [%s] because of regex: '%s'" % (stat['name'],self.rabbitmq_exclude))
             else:
                 self._send_stats(stat)
 
