@@ -177,6 +177,11 @@ class RabbitMonitor:
         """
         while True:
             self.logger.info("Starting Stat run of %s" % self.rabbitmq_url)
+            self.logger.info("RabbitMQ Host: %s" % self.rabbitmq_url)
+            self.logger.info("Stats from vhost: %s" % self.rabbitmq_vhost)
+            self.logger.info("StatsD host: %s:%s" % (self.statsd_host,self.statsd_port))
+            self.logger.info("StatsD Prefix for statsd: %s" % self.prefix)
+            self.logger.info("Interval every %s" % self.interval)
             stats = self._pull_stats()
 
             # Catch Failure to Collect stats from RabbitMQ
