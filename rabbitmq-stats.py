@@ -37,6 +37,7 @@ class RabbitMonitor:
         self.logger.info("Stats from vhost: %s" % self.rabbitmq_vhost)
         self.logger.info("StatsD host: %s:%s" % (self.statsd_host,self.statsd_port))
         self.logger.info("StatsD Prefix for statsd: %s" % self.prefix)
+        self.logger.info("StatsD Exclude Regex: %s" % self.rabbitmq_exclude)
         self.logger.info("Interval every %s" % self.interval)
 
         self.regex = False
@@ -181,6 +182,7 @@ class RabbitMonitor:
             self.logger.info("Stats from vhost: %s" % self.rabbitmq_vhost)
             self.logger.info("StatsD host: %s:%s" % (self.statsd_host,self.statsd_port))
             self.logger.info("StatsD Prefix for statsd: %s" % self.prefix)
+            self.logger.info("StatsD Exclude Regex: %s" % self.rabbitmq_exclude)
             self.logger.info("Interval every %s" % self.interval)
             stats = self._pull_stats()
 
